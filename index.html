@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Weekly Time Tracker</h1>
+        <nav>
+            <button id="btn-prev-week">&larr; Last Week</button>
+            <h2 id="week-label">Week of...</h2>
+            <button id="btn-next-week">Next Week &rarr;</button>
+            <button id="btn-current-week">Current Week</button>
+        </nav>
+        <a href="manage.html" class="nav-link">Manage Activities & Settings</a>
+    </header>
+
+    <main>
+        <div class="table-container">
+            <table id="tracker-table">
+                <thead>
+                    <tr id="date-header-row">
+                        <th></th>
+                        <!-- Sun - Sat headers injected here -->
+                    </tr>
+                </thead>
+                <tbody id="tracker-body">
+                    <!-- Shift and Activity rows injected here -->
+                </tbody>
+                <tfoot id="tracker-footer">
+                    <!-- Totals injected here -->
+                </tfoot>
+            </table>
+        </div>
+        <div class="actions">
+            <button id="btn-save" class="primary-btn">Save Week</button>
+            <span id="save-status"></span>
+        </div>
+    </main>
+
+    <script src="db.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

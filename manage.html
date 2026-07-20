@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Activities - Time Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Manage Activities</h1>
+        <a href="index.html" class="nav-link">&larr; Back to Tracker</a>
+    </header>
+
+    <main>
+        <section class="card">
+            <h2 id="form-title">Add New Activity</h2>
+            <form id="activity-form">
+                <input type="hidden" id="activity-id">
+                <div class="form-group">
+                    <label>Activity Name:</label>
+                    <input type="text" id="activity-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Valid Start Date (Optional):</label>
+                    <input type="date" id="activity-start">
+                </div>
+                <div class="form-group">
+                    <label>Valid End Date (Optional):</label>
+                    <input type="date" id="activity-end">
+                </div>
+                <button type="submit" class="primary-btn" id="btn-save-activity">Save Activity</button>
+                <button type="button" id="btn-cancel-edit" class="hidden">Cancel</button>
+            </form>
+        </section>
+
+        <section class="card">
+            <h2>Current Activities</h2>
+            <table class="data-table" id="activities-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Activities injected here -->
+                </tbody>
+            </table>
+        </section>
+
+        <section class="card">
+            <h2>Data Management</h2>
+            <p>Backup or restore your database. Note: Importing will overwrite all current data.</p>
+            <div class="data-actions">
+                <button id="btn-export">Export to JSON</button>
+                <input type="file" id="file-import" accept=".json" style="display:none;">
+                <button id="btn-import" class="danger-btn">Import from JSON</button>
+            </div>
+        </section>
+    </main>
+
+    <script src="db.js"></script>
+    <script src="manage.js"></script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+:root {
+    --primary: #0056b3;
+    --bg: #f8f9fa;
+    --border: #dee2e6;
+    --match-bg: #d4edda;
+    --mismatch-bg: #f8d7da;
+    --text: #333;
+}
+
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 20px;
+}
+
+header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+nav {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.nav-link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+button {
+    padding: 8px 12px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: white;
+    border-radius: 4px;
+}
+
+.primary-btn {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    font-size: 16px;
+    padding: 10px 20px;
+}
+
+.danger-btn {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Table Layouts */
+.table-container {
+    overflow-x: auto;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    border: 1px solid var(--border);
+    padding: 10px;
+    text-align: center;
+    min-width: 100px;
+}
+
+th:first-child, td:first-child {
+    text-align: left;
+    font-weight: bold;
+    background-color: #f1f3f5;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+}
+
+input[type="time"], input[type="number"], input[type="date"], input[type="text"] {
+    width: 90%;
+    padding: 6px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+input[type="number"] {
+    width: 70px;
+}
+
+.actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+#save-status {
+    color: green;
+    font-weight: bold;
+}
+
+/* Validation Colors */
+.balanced {
+    background-color: var(--match-bg) !important;
+    font-weight: bold;
+}
+
+.unbalanced {
+    background-color: var(--mismatch-bg) !important;
+    font-weight: bold;
+}
+
+/* Manage Page Cards */
+.card {
+    background: white;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 20px;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.data-table th, .data-table td {
+    padding: 12px;
+}
