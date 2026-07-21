@@ -1,5 +1,5 @@
 const DB_NAME = 'TimeTrackerDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Incremented to add Settings store
 
 const DB = {
     db: null,
@@ -11,20 +11,22 @@ const DB = {
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
 
-                // Activities Table
                 if (!db.objectStoreNames.contains('Activities')) {
                     db.createObjectStore('Activities', { keyPath: 'id', autoIncrement: true });
                 }
 
-                // Daily Shifts Table
                 if (!db.objectStoreNames.contains('DailyShifts')) {
                     db.createObjectStore('DailyShifts', { keyPath: 'date' });
                 }
 
-                // Hours Table (Compound Key)
                 if (!db.objectStoreNames.contains('Hours')) {
                     const hoursStore = db.createObjectStore('Hours', { keyPath: ['date', 'activityId'] });
                     hoursStore.createIndex('activityId', 'activityId', { unique: false });
+                }
+
+                // NEW: Settings Table
+                if (!db.objectStoreNames.contains('Settings')) {
+                    db.createObjectStore('Settings', { keyPath: 'key' });
                 }
             };
 
@@ -47,6 +49,17 @@ const DB = {
         });
     },
 
+    // NEW Helper: Get a specific setting with a fallback
+    async getSetting(key, defaultValue = null) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction('Settings', 'readonly');
+            const store = transaction.objectStore('Settings');
+            const request = store.get(key);
+            request.onsuccess = () => resolve(request.result ? request.result.value : defaultValue);
+            request.onerror = () => reject(request.error);
+        });
+    },
+
     async put(storeName, item) {
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction(storeName, 'readwrite');
@@ -65,7 +78,6 @@ const DB = {
 
             activityStore.delete(activityId);
 
-            // Cascading delete for hours tied to this activity
             const index = hoursStore.index('activityId');
             const request = index.getAllKeys(activityId);
 
@@ -82,23 +94,24 @@ const DB = {
         const activities = await this.getStoreAll('Activities');
         const shifts = await this.getStoreAll('DailyShifts');
         const hours = await this.getStoreAll('Hours');
-        return JSON.stringify({ activities, shifts, hours });
+        const settings = await this.getStoreAll('Settings'); // Added
+        return JSON.stringify({ activities, shifts, hours, settings });
     },
 
     async importData(jsonData) {
         const data = JSON.parse(jsonData);
         return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction(['Activities', 'DailyShifts', 'Hours'], 'readwrite');
+            const transaction = this.db.transaction(['Activities', 'DailyShifts', 'Hours', 'Settings'], 'readwrite');
             
-            // Clear existing
             transaction.objectStore('Activities').clear();
             transaction.objectStore('DailyShifts').clear();
             transaction.objectStore('Hours').clear();
+            transaction.objectStore('Settings').clear(); // Added
 
-            // Populate new
-            data.activities.forEach(item => transaction.objectStore('Activities').put(item));
-            data.shifts.forEach(item => transaction.objectStore('DailyShifts').put(item));
-            data.hours.forEach(item => transaction.objectStore('Hours').put(item));
+            data.activities?.forEach(item => transaction.objectStore('Activities').put(item));
+            data.shifts?.forEach(item => transaction.objectStore('DailyShifts').put(item));
+            data.hours?.forEach(item => transaction.objectStore('Hours').put(item));
+            data.settings?.forEach(item => transaction.objectStore('Settings').put(item)); // Added
 
             transaction.oncomplete = () => resolve();
             transaction.onerror = () => reject(transaction.error);

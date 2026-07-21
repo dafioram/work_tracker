@@ -111,7 +111,7 @@ th:first-child, td:first-child {
     z-index: 1;
 }
 
-input[type="time"], input[type="number"], input[type="date"], input[type="text"] {
+input[type="time"], input[type="number"], input[type="date"], input[type="text"], select {
     width: 90%;
     padding: 6px;
     box-sizing: border-box;

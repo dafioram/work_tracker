@@ -2,6 +2,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     await DB.init();
     loadActivitiesTable();
     setupEventListeners();
+	
+	// Load current preference
+    const firstDay = await DB.getSetting('firstDayOfWeek', 0);
+    document.getElementById('setting-first-day').value = firstDay;
+
+    // Save preference on change
+    document.getElementById('setting-first-day').addEventListener('change', async (e) => {
+        const val = parseInt(e.target.value);
+        await DB.put('Settings', { key: 'firstDayOfWeek', value: val });
+        showToast("Preference saved! Returning to home...", "success");
+        setTimeout(() => window.location.href = "index.html", 1500);
+    });
 });
 
 function setupEventListeners() {
