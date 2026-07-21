@@ -14,6 +14,9 @@ const ASSETS_TO_CACHE = [
     `${basePath}/app.js`,
     `${basePath}/manage.js`,
     `${basePath}/manifest.json`,
+	`${basePath}/icons/apple-touch-icon.png`,
+    `${basePath}/icons/favicon.ico`,
+    `${basePath}/icons/favicon-96x96.png`,
 	`${basePath}/icons/icon-192.png`,
     `${basePath}/icons/icon-512.png`
 ];
@@ -28,13 +31,14 @@ self.addEventListener('install', (event) => {
     self.skipWaiting();
 });
 
-// Activate event: Clean up old caches
+// Activate event: Clean up ONLY old caches for THIS app
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames.map((cache) => {
-                    if (cache !== CACHE_NAME) {
+                    // Check if the cache belongs to this app, but is an older version
+                    if (cache.startsWith(APP_NAME) && cache !== CACHE_NAME) {
                         return caches.delete(cache);
                     }
                 })
@@ -47,7 +51,8 @@ self.addEventListener('activate', (event) => {
 // Fetch event: Serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
     event.respondWith(
-        caches.match(event.request).then((response) => {
+        // ignoreSearch: true prevents URL parameters from breaking offline access
+        caches.match(event.request, { ignoreSearch: true }).then((response) => {
             return response || fetch(event.request);
         })
     );

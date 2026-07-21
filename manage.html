@@ -63,7 +63,17 @@
             </div>
         </section>
     </main>
-
+    <div id="toast-container"></div>
+    <div id="confirm-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3>Confirm Action</h3>
+            <p id="confirm-message"></p>
+            <div class="modal-actions">
+                <button id="btn-modal-cancel">Cancel</button>
+                <button id="btn-modal-confirm" class="danger-btn">Yes, I'm sure</button>
+            </div>
+        </div>
+    </div>
     <script src="db.js"></script>
     <script src="manage.js"></script>
 </body>
