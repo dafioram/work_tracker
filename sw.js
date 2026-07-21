@@ -1,16 +1,21 @@
-const CACHE_NAME = "work-tracker-v1";
+const APP_NAME = "work-tracker";
+const VER = "1"
+
+const CACHE_NAME = APP_NAME + "-v" + VER
+
+const basePath = self.location.pathname.replace('/sw.js', '');
 
 const ASSETS_TO_CACHE = [
-    './',
-    './index.html',
-    './manage.html',
-    './styles.css',
-    './db.js',
-    './app.js',
-    './manage.js',
-    './manifest.json',
-	'./icons/icon-192.png',
-    './icons/icon-512.png'
+    `${basePath}/`,
+    `${basePath}/index.html`,
+    `${basePath}/manage.html`,
+    `${basePath}/styles.css`,
+    `${basePath}/db.js`,
+    `${basePath}/app.js`,
+    `${basePath}/manage.js`,
+    `${basePath}/manifest.json`,
+	`${basePath}/icons/icon-192.png`,
+    `${basePath}/icons/icon-512.png`
 ];
 
 // Install event: Cache the static assets

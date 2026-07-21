@@ -46,13 +46,15 @@
     <script src="db.js"></script>
     <script src="app.js"></script>
 	<script>
-		if ('serviceWorker' in navigator) {
-			window.addEventListener('load', () => {
-				navigator.serviceWorker.register('./sw.js')
-					.then(reg => console.log('Service Worker registered'))
-					.catch(err => console.error('Service Worker registration failed:', err));
-			});
-		}
+	if ("serviceWorker" in navigator) {
+        // Strip trailing slashes or /index.html to get the clean base directory
+        const basePath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '');
+        
+        // Register dynamically based on the environment
+        navigator.serviceWorker.register(`${basePath}/sw.js`, { 
+            scope: `${basePath}/` 
+        }).catch(console.error);
+    }
 	</script>
 </body>
 </html>
