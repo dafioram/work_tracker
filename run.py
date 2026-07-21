@@ -9,7 +9,7 @@ class CustomHandler(SimpleHTTPRequestHandler):
 def run_server():
     server_address = ("", 5000) # Listens on all available interfaces
     httpd = HTTPServer(server_address, CustomHandler)
-    print("Server running on port 8000...")
+    print("Server running on port 5000...")
     
     try:
         httpd.serve_forever()

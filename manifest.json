@@ -1,6 +1,7 @@
 {
-  "name": "My Timer",
-  "short_name": "Timer",
+  "name": "Time Tracker",
+  "short_name": "Tracker",
+  "description": "Offline-first daily time and activity tracker.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

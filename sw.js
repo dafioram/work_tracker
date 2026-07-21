@@ -1,46 +1,49 @@
-const CACHE_NAME = "time-tracker-v1";
+const CACHE_NAME = "work-tracker-v1";
 
-const FILES = [
-    "./",
-    "./index.html",
-    "./history.html",
-    "./manifest.json",
-    "./icons/icon-192.png",
-    "./icons/icon-512.png"
+const ASSETS_TO_CACHE = [
+    './',
+    './index.html',
+    './manage.html',
+    './styles.css',
+    './db.js',
+    './app.js',
+    './manage.js',
+    './manifest.json',
+	'./icons/icon-192.png',
+    './icons/icon-512.png'
 ];
 
-
-self.addEventListener("install", event => {
-	self.skipWaiting();
-
+// Install event: Cache the static assets
+self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME)
-        .then(cache => cache.addAll(FILES))
+        caches.open(CACHE_NAME).then((cache) => {
+            return cache.addAll(ASSETS_TO_CACHE);
+        })
     );
-
+    self.skipWaiting();
 });
 
-self.addEventListener("activate", event => {
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(key => key !== CACHE_NAME)
-          .map(key => caches.delete(key))
-      )
-    )
-  );
-
-  clients.claim();
+// Activate event: Clean up old caches
+self.addEventListener('activate', (event) => {
+    event.waitUntil(
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.map((cache) => {
+                    if (cache !== CACHE_NAME) {
+                        return caches.delete(cache);
+                    }
+                })
+            );
+        })
+    );
+    self.clients.claim();
 });
 
-self.addEventListener("fetch", event => {
-
+// Fetch event: Serve from cache, fallback to network
+self.addEventListener('fetch', (event) => {
     event.respondWith(
-
-        caches.match(event.request)
-        .then(response => response || fetch(event.request))
-
+        caches.match(event.request).then((response) => {
+            return response || fetch(event.request);
+        })
     );
-
 });

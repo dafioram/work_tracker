@@ -1,10 +1,13 @@
 :root {
-    --primary: #0056b3;
-    --bg: #f8f9fa;
-    --border: #dee2e6;
-    --match-bg: #d4edda;
-    --mismatch-bg: #f8d7da;
-    --text: #333;
+    --primary: #4da3ff;
+    --bg: #121212;
+    --surface: #1e1e1e;
+    --border: #333333;
+    --match-bg: #1b4332; /* Muted dark green */
+    --mismatch-bg: #5c1a1f; /* Muted dark red */
+    --text: #e0e0e0;
+    --text-muted: #a0a0a0;
+    --input-bg: #2d2d2d;
 }
 
 body {
@@ -13,6 +16,7 @@ body {
     color: var(--text);
     margin: 0;
     padding: 20px;
+    color-scheme: dark;
 }
 
 header {
@@ -39,22 +43,38 @@ button {
     padding: 8px 12px;
     cursor: pointer;
     border: 1px solid var(--border);
-    background: white;
+    background: var(--surface);
+    color: var(--text);
     border-radius: 4px;
+    transition: background 0.2s;
+}
+
+button:hover {
+    background: #2a2a2a;
 }
 
 .primary-btn {
     background-color: var(--primary);
-    color: white;
+    color: #121212;
     border: none;
     font-size: 16px;
     padding: 10px 20px;
+    font-weight: bold;
+}
+
+.primary-btn:hover {
+    background-color: #318ce7;
 }
 
 .danger-btn {
-    background-color: #dc3545;
-    color: white;
+    background-color: #cf6679;
+    color: #121212;
     border: none;
+    font-weight: bold;
+}
+
+.danger-btn:hover {
+    background-color: #b35565;
 }
 
 .hidden {
@@ -64,10 +84,10 @@ button {
 /* Table Layouts */
 .table-container {
     overflow-x: auto;
-    background: white;
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 6px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
 
 table {
@@ -85,7 +105,7 @@ th, td {
 th:first-child, td:first-child {
     text-align: left;
     font-weight: bold;
-    background-color: #f1f3f5;
+    background-color: #181818;
     position: sticky;
     left: 0;
     z-index: 1;
@@ -95,12 +115,20 @@ input[type="time"], input[type="number"], input[type="date"], input[type="text"]
     width: 90%;
     padding: 6px;
     box-sizing: border-box;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     border-radius: 4px;
+    background-color: var(--input-bg);
+    color: var(--text);
+    color-scheme: dark;
 }
 
 input[type="number"] {
     width: 70px;
+}
+
+input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .actions {
@@ -111,7 +139,7 @@ input[type="number"] {
 }
 
 #save-status {
-    color: green;
+    color: #81c784;
     font-weight: bold;
 }
 
@@ -128,7 +156,7 @@ input[type="number"] {
 
 /* Manage Page Cards */
 .card {
-    background: white;
+    background: var(--surface);
     padding: 20px;
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -136,6 +164,7 @@ input[type="number"] {
     max-width: 800px;
     margin-left: auto;
     margin-right: auto;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
 
 .form-group {
@@ -146,6 +175,7 @@ input[type="number"] {
     display: block;
     margin-bottom: 5px;
     font-weight: bold;
+    color: var(--text-muted);
 }
 
 .data-table th, .data-table td {

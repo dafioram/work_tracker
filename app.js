@@ -113,7 +113,7 @@ function renderTable(dates, shiftMap, hoursMap) {
     });
 
     // Divider
-    tbody.innerHTML += `<tr><td colspan="8" style="background:#eee;"><strong>Allocated Activities (Hrs)</strong></td></tr>`;
+    tbody.innerHTML += `<tr><td colspan="8" style="background: var(--border);"><strong>Allocated Activities (Hrs)</strong></td></tr>`;
 
     // Activity Rows
     activitiesCache.forEach(activity => {
