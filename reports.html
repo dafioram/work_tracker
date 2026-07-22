@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - Time Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#121212">
+
+    <!-- Browser Favicons -->
+    <link rel="icon" type="image/png" sizes="96x96" href="icons/favicon-96x96.png">
+    <link rel="shortcut icon" href="icons/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+</head>
+<body>
+    <header>
+        <h1>Activity Reports</h1>
+        <nav>
+            <a href="index.html" class="nav-link">&larr; Back to Tracker</a>
+            <a href="manage.html" class="nav-link">Manage Activities & Settings</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="card" style="margin-bottom: 20px;">
+            <h2>Report Parameters</h2>
+            <div class="actions" style="margin-top: 10px; flex-wrap: wrap;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="report-start">Start Date:</label>
+                    <input type="date" id="report-start">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="report-end">End Date:</label>
+                    <input type="date" id="report-end">
+                </div>
+                <div style="margin-top: auto; padding-bottom: 2px;">
+                    <button id="btn-generate" class="primary-btn">Generate Report</button>
+                </div>
+            </div>
+        </section>
+
+        <div class="table-container">
+            <table id="reports-table">
+                <thead>
+                    <tr id="report-headers">
+                        <!-- Injected by JS -->
+                    </tr>
+                </thead>
+                <tbody id="report-body">
+                    <!-- Injected by JS -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <div id="toast-container"></div>
+
+    <script src="db.js"></script>
+    <script src="reports.js"></script>
+</body>
+</html>
