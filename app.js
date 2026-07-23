@@ -1,6 +1,7 @@
 let currentWeekStart;
-let currentStartDayIndex = 0; // Default to Sunday (0)
+let currentStartDayIndex = 0; 
 let activitiesCache = [];
+let isUnsaved = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
     await DB.init();
@@ -12,6 +13,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
     loadWeek(currentWeekStart);
 });
+
+function markUnsaved() {
+    isUnsaved = true;
+    const status = document.getElementById('save-status');
+    if (status) {
+        status.innerText = "Unsaved changes";
+        status.style.color = "#cf6679"; // Matches your danger-btn color
+    }
+}
 
 function setupEventListeners() {
     document.getElementById('btn-prev-week').addEventListener('click', () => {
@@ -31,13 +41,17 @@ function setupEventListeners() {
 
     document.getElementById('btn-save').addEventListener('click', saveWeek);
 
-    document.getElementById('tracker-table').addEventListener('input', calculateTotals);
-	
-	// NEW: Listen for clicks on the Clear Day buttons
+	document.getElementById('tracker-table').addEventListener('input', () => {
+        markUnsaved();
+        calculateTotals();
+    });
+
+    // UPDATED: Trigger markUnsaved when a day is cleared
     document.getElementById('tracker-table').addEventListener('click', (e) => {
         if (e.target.classList.contains('clear-day-btn')) {
             const date = e.target.dataset.date;
             clearDay(date);
+            markUnsaved();
         }
     });
 }
@@ -79,6 +93,13 @@ function timeToDecimal(timeStr) {
 }
 
 async function loadWeek(startDate) {
+	isUnsaved = false;
+    const status = document.getElementById('save-status');
+    if (status) {
+        status.innerText = "";
+        status.style.color = "#81c784"; // Reset to green
+    }
+	
     const dates = [];
     for (let i = 0; i < 7; i++) {
         const d = new Date(startDate);
@@ -231,6 +252,7 @@ function calculateTotals() {
 
 async function saveWeek() {
     const status = document.getElementById('save-status');
+    status.style.color = "#81c784"; // Revert to success green
     status.innerText = "Saving...";
 
     const dates = Array.from(document.querySelectorAll('#date-header-row th')).slice(1).map(th => th.querySelector('small').innerText);
@@ -243,7 +265,6 @@ async function saveWeek() {
         if (start || stop || breakHrs) {
             await DB.put('DailyShifts', { date, startTime: start, stopTime: stop, breakHours: breakHrs });
         } else {
-            // NEW: If inputs are cleared, actually delete the shift from the DB
             const transaction = DB.db.transaction('DailyShifts', 'readwrite');
             transaction.objectStore('DailyShifts').delete(date);
         }
@@ -262,6 +283,13 @@ async function saveWeek() {
         }
     }
 
+    isUnsaved = false; // NEW: Reset the flag
     status.innerText = "Saved!";
-    setTimeout(() => status.innerText = "", 2000);
+    
+    // NEW: Only clear the message if the user hasn't started typing again
+    setTimeout(() => {
+        if (!isUnsaved) {
+            status.innerText = "";
+        }
+    }, 2000);
 }
