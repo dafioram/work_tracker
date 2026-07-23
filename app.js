@@ -39,6 +39,23 @@ function setupEventListeners() {
         loadWeek(currentWeekStart);
     });
 
+	// Jump to specific week based on chosen date
+    document.getElementById('jump-to-date').addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (val) {
+            // Split the string and construct locally to prevent timezone offset bugs 
+            // that happen when passing standard "YYYY-MM-DD" directly to new Date()
+            const [year, month, day] = val.split('-');
+            const selectedDate = new Date(year, month - 1, day);
+            
+            currentWeekStart = getStartOfWeek(selectedDate, currentStartDayIndex);
+            loadWeek(currentWeekStart);
+            
+            // Clear the input immediately so it acts purely as a jump button
+            e.target.value = '';
+        }
+    });
+
     document.getElementById('btn-save').addEventListener('click', saveWeek);
 
 	document.getElementById('tracker-table').addEventListener('input', () => {
