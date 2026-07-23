@@ -182,6 +182,8 @@ function renderTable(dates, shiftMap, hoursMap) {
 function calculateTotals() {
     const dates = Array.from(document.querySelectorAll('#date-header-row th')).slice(1).map(th => th.querySelector('small').innerText);
 
+    let weeklyShiftSum = 0; // NEW: Track the total shift hours for the week
+
     dates.forEach(date => {
         const start = document.querySelector(`.shift-input[data-date="${date}"][data-key="startTime"]`).value;
         const stop = document.querySelector(`.shift-input[data-date="${date}"][data-key="stopTime"]`).value;
@@ -191,30 +193,40 @@ function calculateTotals() {
         if (start && stop) {
             let decimalStart = timeToDecimal(start);
             let decimalStop = timeToDecimal(stop);
-            if (decimalStop < decimalStart) decimalStop += 24; 
+            if (decimalStop < decimalStart) decimalStop += 24; // Handle overnight shifts
             shiftDelta = (decimalStop - decimalStart) - breakHrs;
         }
-        shiftDelta = Math.max(0, shiftDelta).toFixed(1);
+        
+        shiftDelta = Math.max(0, shiftDelta);
+        weeklyShiftSum += shiftDelta; // Add to our weekly tally
+        
+        let shiftDeltaStr = shiftDelta.toFixed(1);
 
         let activitySum = 0;
         document.querySelectorAll(`.activity-input[data-date="${date}"]`).forEach(input => {
             activitySum += parseFloat(input.value) || 0;
         });
-        activitySum = activitySum.toFixed(1);
+        let activitySumStr = activitySum.toFixed(1);
 
         const summaryCell = document.getElementById(`summary-${date}`);
-        summaryCell.innerHTML = `${shiftDelta} <br><small>vs</small><br> ${activitySum}`;
+        summaryCell.innerHTML = `${shiftDeltaStr} <br><small>vs</small><br> ${activitySumStr}`;
 
         summaryCell.classList.remove('balanced', 'unbalanced');
         
-        if (parseFloat(shiftDelta) === 0 && parseFloat(activitySum) === 0) {
+        if (parseFloat(shiftDeltaStr) === 0 && parseFloat(activitySumStr) === 0) {
             // Do nothing
-        } else if (shiftDelta === activitySum) {
+        } else if (shiftDeltaStr === activitySumStr) {
             summaryCell.classList.add('balanced');
         } else {
             summaryCell.classList.add('unbalanced');
         }
     });
+
+    // NEW: Update the display element on the page
+    const weeklyTotalEl = document.getElementById('weekly-total-display');
+    if (weeklyTotalEl) {
+        weeklyTotalEl.innerText = `Week Total: ${weeklyShiftSum.toFixed(1)} hrs`;
+    }
 }
 
 async function saveWeek() {
