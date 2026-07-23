@@ -32,6 +32,30 @@ function setupEventListeners() {
     document.getElementById('btn-save').addEventListener('click', saveWeek);
 
     document.getElementById('tracker-table').addEventListener('input', calculateTotals);
+	
+	// NEW: Listen for clicks on the Clear Day buttons
+    document.getElementById('tracker-table').addEventListener('click', (e) => {
+        if (e.target.classList.contains('clear-day-btn')) {
+            const date = e.target.dataset.date;
+            clearDay(date);
+        }
+    });
+}
+
+function clearDay(date) {
+    if (!confirm(`Are you sure you want to clear all shifts and hours for ${date}?`)) return;
+
+    // Clear Shift inputs
+    document.querySelectorAll(`.shift-input[data-date="${date}"]`).forEach(input => {
+        input.value = '';
+    });
+
+    // Clear Activity inputs
+    document.querySelectorAll(`.activity-input[data-date="${date}"]`).forEach(input => {
+        input.value = '';
+    });
+
+    calculateTotals();
 }
 
 // Replaces getSunday()
@@ -138,6 +162,15 @@ function renderTable(dates, shiftMap, hoursMap) {
         tbody.innerHTML += row;
     });
 
+	let clearRow = `<tr><td><strong>Actions</strong></td>`;
+    dates.forEach(date => {
+        clearRow += `<td>
+            <button class="danger-btn clear-day-btn" data-date="${date}" style="padding: 4px 8px; font-size: 0.85em; width: 90%;">Clear</button>
+        </td>`;
+    });
+    clearRow += `</tr>`;
+    tbody.innerHTML += clearRow;
+
     let footRow = `<tr><td><strong>Shift Delta vs Allocated</strong></td>`;
     dates.forEach(date => {
         footRow += `<td id="summary-${date}">0.0 / 0.0</td>`;
@@ -197,6 +230,10 @@ async function saveWeek() {
         
         if (start || stop || breakHrs) {
             await DB.put('DailyShifts', { date, startTime: start, stopTime: stop, breakHours: breakHrs });
+        } else {
+            // NEW: If inputs are cleared, actually delete the shift from the DB
+            const transaction = DB.db.transaction('DailyShifts', 'readwrite');
+            transaction.objectStore('DailyShifts').delete(date);
         }
 
         const activityInputs = document.querySelectorAll(`.activity-input[data-date="${date}"]`);
