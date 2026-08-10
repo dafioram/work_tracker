@@ -190,6 +190,7 @@ function renderTable(dates, shiftMap, hoursMap) {
         { label: 'Break (hrs)', key: 'breakHours', type: 'number', step: '0.1' }
     ];
 
+    // 1. Render Shift Inputs
     shiftInputs.forEach(inputDef => {
         let row = `<tr><td><strong>${inputDef.label}</strong></td>`;
         dates.forEach(date => {
@@ -200,9 +201,21 @@ function renderTable(dates, shiftMap, hoursMap) {
         tbody.innerHTML += row;
     });
 
+	// 2. Render Shift Delta vs Allocated immediately after Break
+    let summaryRow = `<tr><td><strong>Shift Delta vs Allocated</strong></td>`;
+    dates.forEach(date => {
+        summaryRow += `<td id="summary-${date}">
+            <div class="summary-container"><span>0.0</span><span class="vs-text">vs</span><span>0.0</span></div>
+        </td>`;
+    });
+    summaryRow += `</tr>`;
+    tbody.innerHTML += summaryRow;
+
+    // 3. Render Allocated Activities Header
     tbody.innerHTML += `<tr><td colspan="8" style="background: var(--border);"><strong>Allocated Activities (Hrs)</strong></td></tr>`;
 
-	activitiesCache.forEach(activity => {
+    // 4. Render Activity Rows
+    activitiesCache.forEach(activity => {
         const isCollapsed = !!activity.isCollapsed;
         const rowClass = isCollapsed ? 'class="collapsed-row"' : '';
         const toggleIcon = isCollapsed ? '+' : '−';
@@ -226,21 +239,15 @@ function renderTable(dates, shiftMap, hoursMap) {
         tbody.innerHTML += row;
     });
 
-	let clearRow = `<tr><td><strong>Actions</strong></td>`;
+    // 5. Render Actions Row at the very bottom in the footer
+    let clearRow = `<tr><td><strong>Actions</strong></td>`;
     dates.forEach(date => {
         clearRow += `<td>
             <button class="danger-btn clear-day-btn" data-date="${date}" style="padding: 4px 8px; font-size: 0.85em; width: 90%;">Clear</button>
         </td>`;
     });
     clearRow += `</tr>`;
-    tbody.innerHTML += clearRow;
-
-    let footRow = `<tr><td><strong>Shift Delta vs Allocated</strong></td>`;
-    dates.forEach(date => {
-        footRow += `<td id="summary-${date}">0.0 / 0.0</td>`;
-    });
-    footRow += `</tr>`;
-    tfoot.innerHTML = footRow;
+    tfoot.innerHTML = clearRow;
 }
 
 function calculateTotals() {
@@ -274,8 +281,9 @@ function calculateTotals() {
         
         let activitySumStr = activitySum.toFixed(1);
 
-        const summaryCell = document.getElementById(`summary-${date}`);
-        summaryCell.innerHTML = `${shiftDeltaStr} <br><small>vs</small><br> ${activitySumStr}`;
+		const summaryCell = document.getElementById(`summary-${date}`);
+
+        summaryCell.innerHTML = `<div class="summary-container"><span>${shiftDeltaStr}</span><span class="vs-text">vs</span><span>${activitySumStr}</span></div>`;
 
         summaryCell.classList.remove('balanced', 'unbalanced');
         

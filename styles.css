@@ -280,3 +280,18 @@ input:disabled {
     gap: 15px;
     margin-top: 25px;
 }
+
+/* Summary Row Flex Layout */
+.summary-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9em;
+}
+
+.summary-container .vs-text {
+    font-size: 0.8em;
+    opacity: 0.8;
+}
