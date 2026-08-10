@@ -246,7 +246,7 @@ function renderTable(dates, shiftMap, hoursMap) {
 function calculateTotals() {
     const dates = Array.from(document.querySelectorAll('#date-header-row th')).slice(1).map(th => th.querySelector('small').innerText);
 
-    let weeklyShiftSum = 0; // NEW: Track the total shift hours for the week
+    let weeklyAllocatedSum = 0; // CHANGED: Now tracks allocated activity hours instead of shift duration
 
     dates.forEach(date => {
         const start = document.querySelector(`.shift-input[data-date="${date}"][data-key="startTime"]`).value;
@@ -262,14 +262,16 @@ function calculateTotals() {
         }
         
         shiftDelta = Math.max(0, shiftDelta);
-        weeklyShiftSum += shiftDelta; // Add to our weekly tally
-        
         let shiftDeltaStr = shiftDelta.toFixed(1);
 
         let activitySum = 0;
         document.querySelectorAll(`.activity-input[data-date="${date}"]`).forEach(input => {
             activitySum += parseFloat(input.value) || 0;
         });
+
+        // NEW: Add the daily activity sum to our weekly tally
+        weeklyAllocatedSum += activitySum; 
+        
         let activitySumStr = activitySum.toFixed(1);
 
         const summaryCell = document.getElementById(`summary-${date}`);
@@ -286,10 +288,10 @@ function calculateTotals() {
         }
     });
 
-    // NEW: Update the display element on the page
+    // UPDATED: Output the new variable and update the label
     const weeklyTotalEl = document.getElementById('weekly-total-display');
     if (weeklyTotalEl) {
-        weeklyTotalEl.innerText = `Week Total: ${weeklyShiftSum.toFixed(1)} hrs`;
+        weeklyTotalEl.innerText = `Allocated Total: ${weeklyAllocatedSum.toFixed(1)} hrs`;
     }
 }
 
