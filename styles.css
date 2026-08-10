@@ -111,6 +111,33 @@ th:first-child, td:first-child {
     z-index: 1;
 }
 
+/* Collapsed Activity Rows */
+tr.collapsed-row td {
+    padding: 4px 10px;
+    height: 28px;
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+tr.collapsed-row input {
+    display: none; /* Hides input boxes when collapsed */
+}
+
+.row-toggle-btn {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0 6px 0 0;
+    line-height: 1;
+}
+
+.row-toggle-btn:hover {
+    color: #318ce7;
+    background: transparent;
+}
+
 input[type="time"], input[type="number"], input[type="date"], input[type="text"], select {
     width: 90%;
     padding: 6px;

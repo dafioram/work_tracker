@@ -63,12 +63,30 @@ function setupEventListeners() {
         calculateTotals();
     });
 
-    // UPDATED: Trigger markUnsaved when a day is cleared
-    document.getElementById('tracker-table').addEventListener('click', (e) => {
+	document.getElementById('tracker-table').addEventListener('click', async (e) => {
+        // Handle Clear Day Button
         if (e.target.classList.contains('clear-day-btn')) {
             const date = e.target.dataset.date;
             clearDay(date);
             markUnsaved();
+        }
+        
+        // Handle Collapse/Expand Button
+        if (e.target.classList.contains('row-toggle-btn')) {
+            const activityId = parseInt(e.target.dataset.id);
+            const activity = activitiesCache.find(a => a.id === activityId);
+            
+            if (activity) {
+                activity.isCollapsed = !activity.isCollapsed;
+                
+                // Toggle DOM elements instantly
+                const tr = e.target.closest('tr');
+                tr.classList.toggle('collapsed-row', activity.isCollapsed);
+                e.target.innerText = activity.isCollapsed ? '+' : '−';
+
+                // Persist choice to IndexedDB
+                await DB.put('Activities', activity);
+            }
         }
     });
 }
@@ -184,8 +202,16 @@ function renderTable(dates, shiftMap, hoursMap) {
 
     tbody.innerHTML += `<tr><td colspan="8" style="background: var(--border);"><strong>Allocated Activities (Hrs)</strong></td></tr>`;
 
-    activitiesCache.forEach(activity => {
-        let row = `<tr><td>${activity.name}</td>`;
+	activitiesCache.forEach(activity => {
+        const isCollapsed = !!activity.isCollapsed;
+        const rowClass = isCollapsed ? 'class="collapsed-row"' : '';
+        const toggleIcon = isCollapsed ? '+' : '−';
+
+        let row = `<tr ${rowClass}><td>
+            <button class="row-toggle-btn" data-id="${activity.id}" title="Toggle Row">${toggleIcon}</button>
+            ${activity.name}
+        </td>`;
+        
         dates.forEach(date => {
             const isDisabled = (activity.startDate && activity.startDate > date) || (activity.endDate && activity.endDate < date);
             const val = hoursMap[`${date}_${activity.id}`] || '';
