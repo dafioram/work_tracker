@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Activities - Time Tracker</title>
     <link rel="stylesheet" href="styles.css">
-	<link rel="manifest" href="manifest.json">
-	<meta name="theme-color" content="#1e1e1e">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e1e1e">
 </head>
 <body>
     <header>
@@ -22,6 +22,10 @@
                 <div class="form-group">
                     <label>Activity Name:</label>
                     <input type="text" id="activity-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="activity-order">Display Order (Optional):</label>
+                    <input type="number" id="activity-order" min="1" placeholder="Auto (Bottom)">
                 </div>
                 <div class="form-group">
                     <label>Valid Start Date (Optional):</label>
@@ -41,6 +45,7 @@
             <table class="data-table" id="activities-table">
                 <thead>
                     <tr>
+                        <th>Order</th>
                         <th>Name</th>
                         <th>Start Date</th>
                         <th>End Date</th>
@@ -53,17 +58,17 @@
             </table>
         </section>
 
-		<section class="settings-section card">
-			<h2>App Preferences</h2>
-			<div class="form-group">
-				<label for="setting-first-day">First Day of the Week:</label>
-				<select id="setting-first-day">
-					<option value="0">Sunday</option>
-					<option value="1">Monday</option>
-					<option value="6">Saturday</option>
-				</select>
-			</div>
-		</section>
+        <section class="settings-section card">
+            <h2>App Preferences</h2>
+            <div class="form-group">
+                <label for="setting-first-day">First Day of the Week:</label>
+                <select id="setting-first-day">
+                    <option value="0">Sunday</option>
+                    <option value="1">Monday</option>
+                    <option value="6">Saturday</option>
+                </select>
+            </div>
+        </section>
 
         <section class="card">
             <h2>Data Management</h2>

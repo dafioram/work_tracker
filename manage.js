@@ -1,9 +1,10 @@
 document.addEventListener('DOMContentLoaded', async () => {
     await DB.init();
+    await resetActivityForm();
     loadActivitiesTable();
     setupEventListeners();
-	
-	// Load current preference
+    
+    // Load current preference
     const firstDay = await DB.getSetting('firstDayOfWeek', 0);
     document.getElementById('setting-first-day').value = firstDay;
 
@@ -24,6 +25,7 @@ function setupEventListeners() {
         const name = document.getElementById('activity-name').value.trim();
         const start = document.getElementById('activity-start').value || null;
         const end = document.getElementById('activity-end').value || null;
+        const rawOrder = document.getElementById('activity-order').value;
 
         if (start && end && start > end) {
             showToast("Start date cannot be after end date.", "error");
@@ -44,25 +46,29 @@ function setupEventListeners() {
             return;
         }
 
-        const payload = { name, startDate: start, endDate: end };
+        // Determine target order (defaults to max + 1 if input is empty or invalid)
+        const maxOrder = await DB.getMaxActivityOrder();
+        let targetOrder = rawOrder ? parseInt(rawOrder, 10) : (maxOrder + 1);
+        if (isNaN(targetOrder) || targetOrder < 1) {
+            targetOrder = maxOrder + 1;
+        }
+
+        // Push down conflicting orders in DB before saving
+        await DB.shiftActivityOrders(targetOrder, parsedId);
+
+        const payload = { name, startDate: start, endDate: end, order: targetOrder };
         if (parsedId) payload.id = parsedId;
 
         await DB.put('Activities', payload);
         
-        document.getElementById('activity-form').reset();
-        document.getElementById('activity-id').value = "";
-        document.getElementById('form-title').innerText = "Add New Activity";
-        document.getElementById('btn-cancel-edit').classList.add('hidden');
+        await resetActivityForm();
         
         showToast("Activity saved successfully!", "success");
         loadActivitiesTable();
     });
 
-    document.getElementById('btn-cancel-edit').addEventListener('click', () => {
-        document.getElementById('activity-form').reset();
-        document.getElementById('activity-id').value = "";
-        document.getElementById('form-title').innerText = "Add New Activity";
-        document.getElementById('btn-cancel-edit').classList.add('hidden');
+    document.getElementById('btn-cancel-edit').addEventListener('click', async () => {
+        await resetActivityForm();
     });
 
     // Data Export
@@ -94,6 +100,7 @@ function setupEventListeners() {
             try {
                 await DB.importData(e.target.result);
                 showToast("Data imported successfully!", "success");
+                await resetActivityForm();
                 loadActivitiesTable();
             } catch (err) {
                 showToast("Error importing data. Make sure it is a valid backup file.", "error");
@@ -102,9 +109,23 @@ function setupEventListeners() {
         };
         reader.readAsText(file);
         
-        // Reset file input so you can re-upload the same file if needed
         e.target.value = '';
     });
+}
+
+// Resets form and auto-calculates the default order for the next activity
+async function resetActivityForm() {
+    document.getElementById('activity-form').reset();
+    document.getElementById('activity-id').value = "";
+    document.getElementById('form-title').innerText = "Add New Activity";
+    document.getElementById('btn-cancel-edit').classList.add('hidden');
+    
+    // Default to bottom order (max + 1)
+    const maxOrder = await DB.getMaxActivityOrder();
+    const orderInput = document.getElementById('activity-order');
+    if (orderInput) {
+        orderInput.value = maxOrder + 1;
+    }
 }
 
 // UI Helpers
@@ -132,7 +153,6 @@ function showConfirmModal(message, onConfirm) {
     const confirmBtn = document.getElementById('btn-modal-confirm');
     const cancelBtn = document.getElementById('btn-modal-cancel');
 
-    // Clone buttons to strip old event listeners if modal is reused
     const newConfirmBtn = confirmBtn.cloneNode(true);
     const newCancelBtn = cancelBtn.cloneNode(true);
     confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
@@ -151,17 +171,30 @@ function showConfirmModal(message, onConfirm) {
 // Data Operations
 async function loadActivitiesTable() {
     const activities = await DB.getStoreAll('Activities');
+    
+    // Sort activities by order ascending (fallback to 999999 for legacy records)
+    activities.sort((a, b) => {
+        const orderA = (a.order !== undefined && a.order !== null && a.order !== "") ? Number(a.order) : 999999;
+        const orderB = (b.order !== undefined && b.order !== null && b.order !== "") ? Number(b.order) : 999999;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.id - b.id;
+    });
+
     const tbody = document.querySelector('#activities-table tbody');
     tbody.innerHTML = '';
 
     activities.forEach(a => {
+        const displayOrder = (a.order !== undefined && a.order !== null) ? a.order : '—';
+        const safeName = a.name.replace(/'/g, "\\'");
+        
         const tr = document.createElement('tr');
         tr.innerHTML = `
+            <td>${displayOrder}</td>
             <td>${a.name}</td>
             <td>${a.startDate || '—'}</td>
             <td>${a.endDate || '—'}</td>
             <td>
-                <button onclick="editActivity(${a.id}, '${a.name}', '${a.startDate || ''}', '${a.endDate || ''}')">Edit</button>
+                <button onclick="editActivity(${a.id}, '${safeName}', '${a.startDate || ''}', '${a.endDate || ''}', '${a.order ?? ''}')">Edit</button>
                 <button class="danger-btn" onclick="deleteActivity(${a.id})">Delete</button>
             </td>
         `;
@@ -169,12 +202,23 @@ async function loadActivitiesTable() {
     });
 }
 
-window.editActivity = (id, name, start, end) => {
+window.editActivity = async (id, name, start, end, order) => {
     document.getElementById('form-title').innerText = "Edit Activity";
     document.getElementById('activity-id').value = id;
     document.getElementById('activity-name').value = name;
     document.getElementById('activity-start').value = start;
     document.getElementById('activity-end').value = end;
+    
+    const orderInput = document.getElementById('activity-order');
+    if (orderInput) {
+        if (order !== undefined && order !== null && order !== '') {
+            orderInput.value = order;
+        } else {
+            const maxOrder = await DB.getMaxActivityOrder();
+            orderInput.value = maxOrder + 1;
+        }
+    }
+
     document.getElementById('btn-cancel-edit').classList.remove('hidden');
     window.scrollTo(0, 0);
 };
@@ -183,6 +227,7 @@ window.deleteActivity = (id) => {
     showConfirmModal("Are you sure? This will delete the activity AND all hours logged against it forever.", async () => {
         await DB.deleteActivity(id);
         showToast("Activity deleted.", "success");
+        await resetActivityForm();
         loadActivitiesTable();
     });
 };

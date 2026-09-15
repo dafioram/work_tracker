@@ -154,6 +154,17 @@ async function loadWeek(startDate) {
         return true;
     });
 
+	// Fallback to 999999 ensures older backends lacking the field go to the bottom.
+    activitiesCache.sort((a, b) => {
+        const orderA = (a.order !== undefined && a.order !== null && a.order !== "") ? Number(a.order) : 999999;
+        const orderB = (b.order !== undefined && b.order !== null && b.order !== "") ? Number(b.order) : 999999;
+        
+        if (orderA !== orderB) {
+            return orderA - orderB; // Sort by order ascending
+        }
+        return a.id - b.id; // Fallback: if orders tie (or both are 999999), sort by ID
+    });
+
     const shifts = await DB.getStoreAll('DailyShifts');
     const shiftMap = {};
     shifts.forEach(s => shiftMap[s.date] = s);
@@ -305,7 +316,7 @@ function calculateTotals() {
 
 async function saveWeek() {
     const status = document.getElementById('save-status');
-    status.style.color = "#81c784"; // Revert to success green
+    status.style.color = "#81c784";
     status.innerText = "Saving...";
 
     const dates = Array.from(document.querySelectorAll('#date-header-row th')).slice(1).map(th => th.querySelector('small').innerText);
@@ -318,8 +329,8 @@ async function saveWeek() {
         if (start || stop || breakHrs) {
             await DB.put('DailyShifts', { date, startTime: start, stopTime: stop, breakHours: breakHrs });
         } else {
-            const transaction = DB.db.transaction('DailyShifts', 'readwrite');
-            transaction.objectStore('DailyShifts').delete(date);
+            // Clean helper call for single string key 'date'
+            await DB.deleteItem('DailyShifts', date);
         }
 
         const activityInputs = document.querySelectorAll(`.activity-input[data-date="${date}"]`);
@@ -330,16 +341,15 @@ async function saveWeek() {
             if (!isNaN(val) && val > 0) {
                 await DB.put('Hours', { date, activityId, hours: val });
             } else {
-                const transaction = DB.db.transaction('Hours', 'readwrite');
-                transaction.objectStore('Hours').delete([date, activityId]);
+                // Clean helper call for composite key array [date, activityId]
+                await DB.deleteItem('Hours', [date, activityId]);
             }
         }
     }
 
-    isUnsaved = false; // NEW: Reset the flag
+    isUnsaved = false;
     status.innerText = "Saved!";
     
-    // NEW: Only clear the message if the user hasn't started typing again
     setTimeout(() => {
         if (!isUnsaved) {
             status.innerText = "";
