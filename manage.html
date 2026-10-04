@@ -70,9 +70,11 @@
             </div>
         </section>
 
-        <section class="card">
+        <section class="card" id="data-management">
             <h2>Data Management</h2>
             <p>Backup or restore your database. Note: Importing will overwrite all current data.</p>
+            <p class="status-line">Last backup: <span id="last-backup">—</span></p>
+            <p class="status-line">Browser storage: <span id="storage-status">—</span></p>
             <div class="data-actions">
                 <button id="btn-export">Export to JSON</button>
                 <input type="file" id="file-import" accept=".json" style="display:none;">

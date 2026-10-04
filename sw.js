@@ -1,5 +1,5 @@
 const APP_NAME = "work-tracker";
-const VER = "2"
+const VER = "3"
 
 const CACHE_NAME = APP_NAME + "-v" + VER
 
@@ -51,12 +51,28 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// Fetch event: Serve from cache, fallback to network
+// Fetch event: stale-while-revalidate. Serve the cached copy immediately (works offline),
+// and refresh the cache from the network in the background so a deploy is picked up on
+// the next load without having to bump VER.
 self.addEventListener('fetch', (event) => {
-    event.respondWith(
+    const request = event.request;
+    if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
+
+    event.respondWith(caches.open(CACHE_NAME).then(async (cache) => {
         // ignoreSearch: true prevents URL parameters from breaking offline access
-        caches.match(event.request, { ignoreSearch: true }).then((response) => {
-            return response || fetch(event.request);
-        })
-    );
+        const cached = await cache.match(request, { ignoreSearch: true });
+
+        // no-cache: revalidate with the server instead of reusing the browser's HTTP cache
+        const network = fetch(request, { cache: 'no-cache' }).then((response) => {
+            if (response.ok) cache.put(request, response.clone());
+            return response;
+        });
+
+        if (cached) {
+            // Keep the worker alive until the background refresh finishes; ignore offline failures
+            event.waitUntil(network.catch(() => {}));
+            return cached;
+        }
+        return network;
+    }));
 });

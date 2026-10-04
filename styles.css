@@ -39,6 +39,24 @@ nav {
     font-weight: 500;
 }
 
+.banner {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 10px 16px;
+    margin-bottom: 20px;
+    background: var(--mismatch-bg);
+    border: 1px solid #cf6679;
+    border-radius: 6px;
+}
+
+.status-line {
+    color: var(--text-muted);
+    margin: 4px 0;
+}
+
 button {
     padding: 8px 12px;
     cursor: pointer;
@@ -109,33 +127,6 @@ th:first-child, td:first-child {
     position: sticky;
     left: 0;
     z-index: 1;
-}
-
-/* Collapsed Activity Rows */
-tr.collapsed-row td {
-    padding: 4px 10px;
-    height: 28px;
-    background-color: rgba(255, 255, 255, 0.02);
-}
-
-tr.collapsed-row input {
-    display: none; /* Hides input boxes when collapsed */
-}
-
-.row-toggle-btn {
-    background: none;
-    border: none;
-    color: var(--primary);
-    font-weight: bold;
-    font-size: 14px;
-    cursor: pointer;
-    padding: 0 6px 0 0;
-    line-height: 1;
-}
-
-.row-toggle-btn:hover {
-    color: #318ce7;
-    background: transparent;
 }
 
 input[type="time"], input[type="number"], input[type="date"], input[type="text"], select {

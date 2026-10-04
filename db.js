@@ -72,27 +72,53 @@ const DB = {
         return maxOrder;
     },
 
-    // Helper: Shift existing activity orders down when an order collision occurs
-    async shiftActivityOrders(desiredOrder, currentActivityId = null) {
-        if (!desiredOrder) return;
-        
-        desiredOrder = Number(desiredOrder);
-        const allActivities = await this.getStoreAll('Activities');
-        
-        const conflict = allActivities.find(a => 
-            Number(a.order) === desiredOrder && a.id !== currentActivityId
-        );
-        
-        if (conflict) {
-            for (let activity of allActivities) {
-                if (activity.id !== currentActivityId && activity.order !== undefined && activity.order !== null) {
-                    if (Number(activity.order) >= desiredOrder) {
-                        activity.order = Number(activity.order) + 1;
-                        await this.put('Activities', activity);
-                    }
-                }
+    // Sorts activities by display order; records without an order go last, ties break by id.
+    sortByActivityOrder(activities) {
+        const orderOf = (a) => (a.order !== undefined && a.order !== null && a.order !== "") ? Number(a.order) : Infinity;
+        return activities.sort((a, b) => (orderOf(a) - orderOf(b)) || (a.id - b.id));
+    },
+
+    // Writes the given activities with orders renumbered 1..N in list order.
+    // Only records whose order changed are written, plus any in alwaysWrite.
+    renumberOps(activities, alwaysWrite = []) {
+        const ops = [];
+        activities.forEach((activity, i) => {
+            if (activity.order !== i + 1 || alwaysWrite.includes(activity)) {
+                activity.order = i + 1;
+                ops.push({ store: 'Activities', put: activity });
             }
-        }
+        });
+        return ops;
+    },
+
+    // Saves an activity at the given 1-based position, renumbering every activity so orders
+    // stay contiguous, and deletes the given Hours keys, all in one transaction.
+    async saveActivity(activity, targetOrder, hourKeysToDelete = []) {
+        const ordered = this.sortByActivityOrder(
+            (await this.getStoreAll('Activities')).filter(a => a.id !== activity.id)
+        );
+        const position = Math.min(Math.max(targetOrder - 1, 0), ordered.length);
+        ordered.splice(position, 0, activity);
+
+        const ops = this.renumberOps(ordered, [activity]);
+        hourKeysToDelete.forEach(key => ops.push({ store: 'Hours', delete: key }));
+        await this.writeBatch(['Activities', 'Hours'], ops);
+    },
+
+    // Closes gaps in activity orders (e.g. after a delete or from older data).
+    async normalizeActivityOrders() {
+        const activities = this.sortByActivityOrder(await this.getStoreAll('Activities'));
+        const ops = this.renumberOps(activities);
+        if (ops.length) await this.writeBatch(['Activities'], ops);
+    },
+
+    async getHoursForActivity(activityId) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction('Hours', 'readonly');
+            const request = transaction.objectStore('Hours').index('activityId').getAll(activityId);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
     },
 
     async put(storeName, item) {
@@ -105,8 +131,30 @@ const DB = {
         });
     },
 
-    async deleteActivity(activityId) {
+    // Applies a list of { store, put } / { store, delete } operations in one transaction:
+    // either every write lands or none do.
+    async writeBatch(storeNames, ops) {
         return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(storeNames, 'readwrite');
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = () => reject(transaction.error || new Error("Save aborted."));
+
+            try {
+                ops.forEach(op => {
+                    const store = transaction.objectStore(op.store);
+                    if ('put' in op) store.put(op.put);
+                    else store.delete(op.delete);
+                });
+            } catch (err) {
+                transaction.abort();
+                reject(err);
+            }
+        });
+    },
+
+    async deleteActivity(activityId) {
+        await new Promise((resolve, reject) => {
             const transaction = this.db.transaction(['Activities', 'Hours'], 'readwrite');
             const activityStore = transaction.objectStore('Activities');
             const hoursStore = transaction.objectStore('Hours');
@@ -123,17 +171,32 @@ const DB = {
             transaction.oncomplete = () => resolve();
             transaction.onerror = () => reject(transaction.error);
         });
+        await this.normalizeActivityOrders();
     },
 	
-	async deleteItem(storeName, key) {
-		return new Promise((resolve, reject) => {
-			const transaction = this.db.transaction(storeName, 'readwrite');
-			const store = transaction.objectStore(storeName);
-			const request = store.delete(key);
-			request.onsuccess = () => resolve();
-			request.onerror = () => reject(request.error);
-		});
-	},
+    // Asks the browser not to evict our data under storage pressure (or Safari's 7-day
+    // cleanup). Returns true if storage is persistent, false if not, null if unsupported.
+    async requestPersistentStorage() {
+        if (!navigator.storage || !navigator.storage.persist) return null;
+        try {
+            if (await navigator.storage.persisted()) return true;
+            return await navigator.storage.persist();
+        } catch (err) {
+            console.error(err);
+            return false;
+        }
+    },
+
+    async markBackedUp() {
+        await this.put('Settings', { key: 'lastBackupAt', value: new Date().toISOString() });
+    },
+
+    // Whole days since the last export, or null if there has never been one.
+    async daysSinceLastBackup() {
+        const last = await this.getSetting('lastBackupAt', null);
+        if (!last) return null;
+        return Math.floor((Date.now() - Date.parse(last)) / 86400000);
+    },
 
     async exportData() {
         const activities = await this.getStoreAll('Activities');
