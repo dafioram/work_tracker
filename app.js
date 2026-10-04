@@ -23,20 +23,32 @@ function markUnsaved() {
     }
 }
 
+// Asks before discarding unsaved edits. Returns true if it is OK to proceed.
+function confirmDiscardChanges() {
+    return !isUnsaved || confirm("You have unsaved changes for this week. Discard them?");
+}
+
+function navigateToWeek(newWeekStart) {
+    if (!confirmDiscardChanges()) return;
+    currentWeekStart = newWeekStart;
+    loadWeek(currentWeekStart);
+}
+
 function setupEventListeners() {
     document.getElementById('btn-prev-week').addEventListener('click', () => {
-        currentWeekStart.setDate(currentWeekStart.getDate() - 7);
-        loadWeek(currentWeekStart);
+        const d = new Date(currentWeekStart);
+        d.setDate(d.getDate() - 7);
+        navigateToWeek(d);
     });
     
     document.getElementById('btn-next-week').addEventListener('click', () => {
-        currentWeekStart.setDate(currentWeekStart.getDate() + 7);
-        loadWeek(currentWeekStart);
+        const d = new Date(currentWeekStart);
+        d.setDate(d.getDate() + 7);
+        navigateToWeek(d);
     });
 
     document.getElementById('btn-current-week').addEventListener('click', () => {
-        currentWeekStart = getStartOfWeek(new Date(), currentStartDayIndex);
-        loadWeek(currentWeekStart);
+        navigateToWeek(getStartOfWeek(new Date(), currentStartDayIndex));
     });
 
 	// Jump to specific week based on chosen date
@@ -48,11 +60,18 @@ function setupEventListeners() {
             const [year, month, day] = val.split('-');
             const selectedDate = new Date(year, month - 1, day);
             
-            currentWeekStart = getStartOfWeek(selectedDate, currentStartDayIndex);
-            loadWeek(currentWeekStart);
+            navigateToWeek(getStartOfWeek(selectedDate, currentStartDayIndex));
             
             // Clear the input immediately so it acts purely as a jump button
             e.target.value = '';
+        }
+    });
+
+    // Warn before leaving the page (nav links, refresh, close) with unsaved edits
+    window.addEventListener('beforeunload', (e) => {
+        if (isUnsaved) {
+            e.preventDefault();
+            e.returnValue = '';
         }
     });
 
@@ -118,7 +137,7 @@ function getStartOfWeek(d, startDayIndex) {
 }
 
 function formatDate(d) {
-    return d.toISOString().split('T')[0];
+    return toLocalDateString(d);
 }
 
 function timeToDecimal(timeStr) {
@@ -206,7 +225,7 @@ function renderTable(dates, shiftMap, hoursMap) {
         let row = `<tr><td><strong>${inputDef.label}</strong></td>`;
         dates.forEach(date => {
             const val = shiftMap[date] ? shiftMap[date][inputDef.key] || '' : '';
-            row += `<td><input type="${inputDef.type}" class="shift-input" data-date="${date}" data-key="${inputDef.key}" value="${val}" step="${inputDef.step}"></td>`;
+            row += `<td><input type="${inputDef.type}" class="shift-input" data-date="${date}" data-key="${inputDef.key}" value="${escapeHtml(val)}" step="${inputDef.step}"></td>`;
         });
         row += `</tr>`;
         tbody.innerHTML += row;
@@ -233,7 +252,7 @@ function renderTable(dates, shiftMap, hoursMap) {
 
         let row = `<tr ${rowClass}><td>
             <button class="row-toggle-btn" data-id="${activity.id}" title="Toggle Row">${toggleIcon}</button>
-            ${activity.name}
+            ${escapeHtml(activity.name)}
         </td>`;
         
         dates.forEach(date => {

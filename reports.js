@@ -87,7 +87,7 @@ function renderReportTable(activities, dataMap, sortedMonths) {
 
     activities.forEach(a => {
         const rowData = dataMap[a.id];
-        let row = `<tr><td><strong>${rowData.name}</strong></td>`;
+        let row = `<tr><td><strong>${escapeHtml(rowData.name)}</strong></td>`;
         
         sortedMonths.forEach(monthKey => {
             const hours = rowData.months[monthKey] || 0;

@@ -78,7 +78,7 @@ function setupEventListeners() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `time_tracker_backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `time_tracker_backup_${toLocalDateString(new Date())}.json`;
         a.click();
         URL.revokeObjectURL(url);
         showToast("Data exported successfully!", "success");
@@ -103,7 +103,7 @@ function setupEventListeners() {
                 await resetActivityForm();
                 loadActivitiesTable();
             } catch (err) {
-                showToast("Error importing data. Make sure it is a valid backup file.", "error");
+                showToast(`Import failed, no data was changed. ${err.message}`, "error");
                 console.error(err);
             }
         };
@@ -185,24 +185,26 @@ async function loadActivitiesTable() {
 
     activities.forEach(a => {
         const displayOrder = (a.order !== undefined && a.order !== null) ? a.order : '—';
-        const safeName = a.name.replace(/'/g, "\\'");
         
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${displayOrder}</td>
-            <td>${a.name}</td>
-            <td>${a.startDate || '—'}</td>
-            <td>${a.endDate || '—'}</td>
+            <td>${escapeHtml(displayOrder)}</td>
+            <td>${escapeHtml(a.name)}</td>
+            <td>${escapeHtml(a.startDate || '—')}</td>
+            <td>${escapeHtml(a.endDate || '—')}</td>
             <td>
-                <button onclick="editActivity(${a.id}, '${safeName}', '${a.startDate || ''}', '${a.endDate || ''}', '${a.order ?? ''}')">Edit</button>
-                <button class="danger-btn" onclick="deleteActivity(${a.id})">Delete</button>
+                <button class="btn-edit">Edit</button>
+                <button class="danger-btn btn-delete">Delete</button>
             </td>
         `;
+        tr.querySelector('.btn-edit').addEventListener('click', () =>
+            editActivity(a.id, a.name, a.startDate || '', a.endDate || '', a.order ?? ''));
+        tr.querySelector('.btn-delete').addEventListener('click', () => deleteActivity(a.id));
         tbody.appendChild(tr);
     });
 }
 
-window.editActivity = async (id, name, start, end, order) => {
+async function editActivity(id, name, start, end, order) {
     document.getElementById('form-title').innerText = "Edit Activity";
     document.getElementById('activity-id').value = id;
     document.getElementById('activity-name').value = name;
@@ -221,13 +223,13 @@ window.editActivity = async (id, name, start, end, order) => {
 
     document.getElementById('btn-cancel-edit').classList.remove('hidden');
     window.scrollTo(0, 0);
-};
+}
 
-window.deleteActivity = (id) => {
+function deleteActivity(id) {
     showConfirmModal("Are you sure? This will delete the activity AND all hours logged against it forever.", async () => {
         await DB.deleteActivity(id);
         showToast("Activity deleted.", "success");
         await resetActivityForm();
         loadActivitiesTable();
     });
-};
+}
