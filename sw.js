@@ -1,5 +1,5 @@
 const APP_NAME = "work-tracker";
-const VER = "1"
+const VER = "2"
 
 const CACHE_NAME = APP_NAME + "-v" + VER
 
@@ -12,6 +12,7 @@ const ASSETS_TO_CACHE = [
 	`${basePath}/reports.html`,
     `${basePath}/styles.css`,
     `${basePath}/db.js`,
+    `${basePath}/utils.js`,
     `${basePath}/app.js`,
     `${basePath}/manage.js`,
 	`${basePath}/reports.js`,
