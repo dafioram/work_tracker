@@ -12,7 +12,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     setupEventListeners();
     loadWeek(currentWeekStart);
+
+    DB.requestPersistentStorage();
+    showBackupReminder();
 });
+
+const BACKUP_REMINDER_DAYS = 7;
+
+// Browser storage can be cleared, so nudge toward an export when the last one is stale
+async function showBackupReminder() {
+    const hasData = (await DB.getStoreAll('Hours')).length > 0;
+    const days = await DB.daysSinceLastBackup();
+    if (!hasData || (days !== null && days < BACKUP_REMINDER_DAYS)) return;
+
+    document.getElementById('backup-reminder-text').innerText = days === null
+        ? "Your time data has never been backed up."
+        : `Your time data hasn't been backed up in ${days} days.`;
+    document.getElementById('backup-reminder').classList.remove('hidden');
+}
 
 function markUnsaved() {
     isUnsaved = true;
@@ -82,36 +99,18 @@ function setupEventListeners() {
         calculateTotals();
     });
 
-	document.getElementById('tracker-table').addEventListener('click', async (e) => {
+	document.getElementById('tracker-table').addEventListener('click', (e) => {
         // Handle Clear Day Button
         if (e.target.classList.contains('clear-day-btn')) {
-            const date = e.target.dataset.date;
-            clearDay(date);
-            markUnsaved();
-        }
-        
-        // Handle Collapse/Expand Button
-        if (e.target.classList.contains('row-toggle-btn')) {
-            const activityId = parseInt(e.target.dataset.id);
-            const activity = activitiesCache.find(a => a.id === activityId);
-            
-            if (activity) {
-                activity.isCollapsed = !activity.isCollapsed;
-                
-                // Toggle DOM elements instantly
-                const tr = e.target.closest('tr');
-                tr.classList.toggle('collapsed-row', activity.isCollapsed);
-                e.target.innerText = activity.isCollapsed ? '+' : '−';
-
-                // Persist choice to IndexedDB
-                await DB.put('Activities', activity);
-            }
+            clearDay(e.target.dataset.date);
         }
     });
 }
 
 function clearDay(date) {
     if (!confirm(`Are you sure you want to clear all shifts and hours for ${date}?`)) return;
+
+    markUnsaved();
 
     // Clear Shift inputs
     document.querySelectorAll(`.shift-input[data-date="${date}"]`).forEach(input => {
@@ -173,16 +172,7 @@ async function loadWeek(startDate) {
         return true;
     });
 
-	// Fallback to 999999 ensures older backends lacking the field go to the bottom.
-    activitiesCache.sort((a, b) => {
-        const orderA = (a.order !== undefined && a.order !== null && a.order !== "") ? Number(a.order) : 999999;
-        const orderB = (b.order !== undefined && b.order !== null && b.order !== "") ? Number(b.order) : 999999;
-        
-        if (orderA !== orderB) {
-            return orderA - orderB; // Sort by order ascending
-        }
-        return a.id - b.id; // Fallback: if orders tie (or both are 999999), sort by ID
-    });
+    DB.sortByActivityOrder(activitiesCache);
 
     const shifts = await DB.getStoreAll('DailyShifts');
     const shiftMap = {};
@@ -246,14 +236,7 @@ function renderTable(dates, shiftMap, hoursMap) {
 
     // 4. Render Activity Rows
     activitiesCache.forEach(activity => {
-        const isCollapsed = !!activity.isCollapsed;
-        const rowClass = isCollapsed ? 'class="collapsed-row"' : '';
-        const toggleIcon = isCollapsed ? '+' : '−';
-
-        let row = `<tr ${rowClass}><td>
-            <button class="row-toggle-btn" data-id="${activity.id}" title="Toggle Row">${toggleIcon}</button>
-            ${escapeHtml(activity.name)}
-        </td>`;
+        let row = `<tr><td>${escapeHtml(activity.name)}</td>`;
         
         dates.forEach(date => {
             const isDisabled = (activity.startDate && activity.startDate > date) || (activity.endDate && activity.endDate < date);
@@ -339,6 +322,7 @@ async function saveWeek() {
     status.innerText = "Saving...";
 
     const dates = Array.from(document.querySelectorAll('#date-header-row th')).slice(1).map(th => th.querySelector('small').innerText);
+    const ops = [];
 
     for (let date of dates) {
         const start = document.querySelector(`.shift-input[data-date="${date}"][data-key="startTime"]`).value;
@@ -346,10 +330,9 @@ async function saveWeek() {
         const breakHrs = parseFloat(document.querySelector(`.shift-input[data-date="${date}"][data-key="breakHours"]`).value) || null;
         
         if (start || stop || breakHrs) {
-            await DB.put('DailyShifts', { date, startTime: start, stopTime: stop, breakHours: breakHrs });
+            ops.push({ store: 'DailyShifts', put: { date, startTime: start, stopTime: stop, breakHours: breakHrs } });
         } else {
-            // Clean helper call for single string key 'date'
-            await DB.deleteItem('DailyShifts', date);
+            ops.push({ store: 'DailyShifts', delete: date });
         }
 
         const activityInputs = document.querySelectorAll(`.activity-input[data-date="${date}"]`);
@@ -358,12 +341,21 @@ async function saveWeek() {
             const val = parseFloat(input.value);
             
             if (!isNaN(val) && val > 0) {
-                await DB.put('Hours', { date, activityId, hours: val });
+                ops.push({ store: 'Hours', put: { date, activityId, hours: val } });
             } else {
-                // Clean helper call for composite key array [date, activityId]
-                await DB.deleteItem('Hours', [date, activityId]);
+                // Composite key [date, activityId]
+                ops.push({ store: 'Hours', delete: [date, activityId] });
             }
         }
+    }
+
+    try {
+        await DB.writeBatch(['DailyShifts', 'Hours'], ops);
+    } catch (err) {
+        console.error(err);
+        status.style.color = "#cf6679";
+        status.innerText = "Save failed, nothing was saved. Please try again.";
+        return;
     }
 
     isUnsaved = false;

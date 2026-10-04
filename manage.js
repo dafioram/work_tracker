@@ -1,8 +1,10 @@
 document.addEventListener('DOMContentLoaded', async () => {
     await DB.init();
+    await DB.normalizeActivityOrders();
     await resetActivityForm();
     loadActivitiesTable();
     setupEventListeners();
+    showDataStatus();
     
     // Load current preference
     const firstDay = await DB.getSetting('firstDayOfWeek', 0);
@@ -46,25 +48,40 @@ function setupEventListeners() {
             return;
         }
 
-        // Determine target order (defaults to max + 1 if input is empty or invalid)
+        // Determine target order (defaults to the bottom if input is empty or invalid)
         const maxOrder = await DB.getMaxActivityOrder();
         let targetOrder = rawOrder ? parseInt(rawOrder, 10) : (maxOrder + 1);
         if (isNaN(targetOrder) || targetOrder < 1) {
             targetOrder = maxOrder + 1;
         }
 
-        // Push down conflicting orders in DB before saving
-        await DB.shiftActivityOrders(targetOrder, parsedId);
-
-        const payload = { name, startDate: start, endDate: end, order: targetOrder };
+        const payload = { name, startDate: start, endDate: end };
         if (parsedId) payload.id = parsedId;
 
-        await DB.put('Activities', payload);
-        
-        await resetActivityForm();
-        
-        showToast("Activity saved successfully!", "success");
-        loadActivitiesTable();
+        const save = async (hourKeysToDelete) => {
+            await DB.saveActivity(payload, targetOrder, hourKeysToDelete);
+            await resetActivityForm();
+            showToast("Activity saved successfully!", "success");
+            loadActivitiesTable();
+        };
+
+        // Hours logged outside a narrowed date range would no longer show on the tracker
+        // but would still count in reports, so delete them (after confirming) with the save.
+        const orphaned = parsedId
+            ? (await DB.getHoursForActivity(parsedId)).filter(h => (start && h.date < start) || (end && h.date > end))
+            : [];
+
+        if (orphaned.length === 0) {
+            await save([]);
+            return;
+        }
+
+        const totalHours = orphaned.reduce((sum, h) => sum + h.hours, 0);
+        showConfirmModal(
+            `${orphaned.length} logged ${orphaned.length === 1 ? 'entry' : 'entries'} (${totalHours.toFixed(2)} hrs) ` +
+            `${orphaned.length === 1 ? 'is' : 'are'} outside the new date range and will be permanently deleted. Continue?`,
+            () => save(orphaned.map(h => [h.date, h.activityId]))
+        );
     });
 
     document.getElementById('btn-cancel-edit').addEventListener('click', async () => {
@@ -81,6 +98,8 @@ function setupEventListeners() {
         a.download = `time_tracker_backup_${toLocalDateString(new Date())}.json`;
         a.click();
         URL.revokeObjectURL(url);
+        await DB.markBackedUp();
+        showDataStatus();
         showToast("Data exported successfully!", "success");
     });
 
@@ -99,6 +118,10 @@ function setupEventListeners() {
         reader.onload = async (e) => {
             try {
                 await DB.importData(e.target.result);
+                await DB.normalizeActivityOrders();
+                // The data now matches a backup file, so it counts as backed up
+                await DB.markBackedUp();
+                showDataStatus();
                 showToast("Data imported successfully!", "success");
                 await resetActivityForm();
                 loadActivitiesTable();
@@ -126,6 +149,18 @@ async function resetActivityForm() {
     if (orderInput) {
         orderInput.value = maxOrder + 1;
     }
+}
+
+async function showDataStatus() {
+    const days = await DB.daysSinceLastBackup();
+    document.getElementById('last-backup').innerText =
+        days === null ? "Never" : days === 0 ? "Today" : `${days} day${days === 1 ? '' : 's'} ago`;
+
+    const persisted = await DB.requestPersistentStorage();
+    document.getElementById('storage-status').innerText =
+        persisted === true ? "Persistent (the browser will not clear it automatically)"
+        : persisted === false ? "Not persistent, so the browser may clear it. Installing the app helps; export backups regularly."
+        : "Persistence not supported by this browser; export backups regularly.";
 }
 
 // UI Helpers
@@ -172,13 +207,7 @@ function showConfirmModal(message, onConfirm) {
 async function loadActivitiesTable() {
     const activities = await DB.getStoreAll('Activities');
     
-    // Sort activities by order ascending (fallback to 999999 for legacy records)
-    activities.sort((a, b) => {
-        const orderA = (a.order !== undefined && a.order !== null && a.order !== "") ? Number(a.order) : 999999;
-        const orderB = (b.order !== undefined && b.order !== null && b.order !== "") ? Number(b.order) : 999999;
-        if (orderA !== orderB) return orderA - orderB;
-        return a.id - b.id;
-    });
+    DB.sortByActivityOrder(activities);
 
     const tbody = document.querySelector('#activities-table tbody');
     tbody.innerHTML = '';
